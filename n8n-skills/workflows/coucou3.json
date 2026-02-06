@@ -1,0 +1,19 @@
+{
+  "name": "coucou3",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "coucou3",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseData": "={{ { success: true, received: $json } }}"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [300, 300]
+    }
+  ],
+  "connections": {}
+}

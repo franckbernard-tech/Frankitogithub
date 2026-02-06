@@ -1,0 +1,86 @@
+{
+  "backup_info": {
+    "version": "1.0",
+    "created": "2026-02-06",
+    "last_updated": "2026-02-06",
+    "user": "Bonjour",
+    "system": "Windows 64-bit"
+  },
+  "ai_system": {
+    "name": "Claude Haiku 4.5",
+    "capabilities": [
+      "Code generation",
+      "File manipulation",
+      "Documentation",
+      "Debugging",
+      "Architecture design",
+      "Testing",
+      "DevOps automation"
+    ],
+    "workspace_integration": "VS Code"
+  },
+  "project_configuration": {
+    "name": "Frankito-IA",
+    "root_path": "C:\\Users\\Bonjour\\Documents\\Frankito-IA",
+    "project_type": "Multi-skill N8N Automation",
+    "primary_tools": [
+      "N8N",
+      "VS Code",
+      "Git/GitHub",
+      "Claude IA"
+    ]
+  },
+  "workspace_settings": {
+    "editor": {
+      "name": "Visual Studio Code",
+      "settings": {
+        "auto_save": true,
+        "format_on_save": true,
+        "theme": "Can be customized"
+      }
+    },
+    "git": {
+      "enabled": true,
+      "auto_commit": false,
+      "main_branch": "main"
+    }
+  },
+  "data_directories": {
+    "skills": "n8n-skills/",
+    "config": ".claude/",
+    "git": ".git/",
+    "documentation": "./"
+  },
+  "critical_files": [
+    "AI_CONFIG.json",
+    "BACKUP_MANIFEST.md",
+    "setup_restoration.ps1",
+    "CONFIGURATION_BACKUP.json",
+    ".mcp.json",
+    ".gitignore",
+    "README.md",
+    "CLAUDE.md",
+    "INSTALLATION.md"
+  ],
+  "security_notes": {
+    "api_keys": "Never commit - use .env (template provided)",
+    "credentials": "Use .env.template as reference",
+    "tokens": "GitHub tokens must be generated locally"
+  },
+  "restoration_checklist": {
+    "1_git_clone": "Clone repository from GitHub",
+    "2_run_restoration": "Execute setup_restoration.ps1",
+    "3_env_config": "Create .env from .env.template",
+    "4_api_keys": "Add your API keys and tokens",
+    "5_vscode_open": "Open in VS Code: code .",
+    "6_extensions": "Install recommended VS Code extensions",
+    "7_verify": "Test AI integration and N8N"
+  },
+  "backup_frequency": "As needed before PC change",
+  "github_sync_steps": [
+    "git add .",
+    "git commit -m 'Configuration backup - date'",
+    "git push origin main"
+  ],
+  "notes": "This configuration allows complete recovery on any PC while maintaining security of sensitive data"
+}

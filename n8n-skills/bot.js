@@ -3,7 +3,9 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+// WARNING: token provided by user; storing secrets in repo is sensitive.
+// The code prefers the environment variable but will fallback to the provided token.
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE';
 const N8N_WEBHOOK = 'https://n8n.srv1289936.hstgr.cloud/webhook-test/ordre-frankito';
 
 if (!BOT_TOKEN) {
@@ -12,12 +14,55 @@ if (!BOT_TOKEN) {
 }
 
 const bot = new Telegraf(BOT_TOKEN);
+const fs = require('fs');
+const CHAT_ID_FILE = 'n8n-skills/chat_ids.txt';
+
+function saveChatId(id) {
+  try {
+    let list = [];
+    if (fs.existsSync(CHAT_ID_FILE)) {
+      const raw = fs.readFileSync(CHAT_ID_FILE, { encoding: 'utf8' });
+      list = raw.split(/\r?\n/).filter(Boolean);
+    }
+    if (!list.includes(String(id))) {
+      list.push(String(id));
+      fs.writeFileSync(CHAT_ID_FILE, list.join('\n') + '\n', { encoding: 'utf8' });
+      console.log(`💾 Saved chatId ${id} to ${CHAT_ID_FILE}`);
+    }
+  } catch (err) {
+    console.error('Error saving chatId:', err.message);
+  }
+}
 
 console.log('🤖 Bot Frankito démarré...');
+
+// If a default chat id is provided, send a startup confirmation message.
+const DEFAULT_CHAT_ID = 673173233; // provided by user
+
+async function sendStartupPing() {
+  try {
+    if (!BOT_TOKEN) return;
+    // send a one-off message to confirm the bot is operational
+    await bot.telegram.sendMessage(DEFAULT_CHAT_ID, 'Système opérationnel, Frankito !');
+    console.log('✅ Startup ping sent to', DEFAULT_CHAT_ID);
+  } catch (err) {
+    console.error('Failed to send startup ping:', err && err.message ? err.message : err);
+  }
+}
+
+// Try to send startup ping (non-blocking)
+sendStartupPing();
 
 // Commande /start
 bot.start((ctx) => {
   ctx.reply('👋 Bienvenue! Utilisez /n8n <message> pour envoyer une commande à N8N');
+});
+
+// Commande /register : enregistre le chatId dans un fichier pour utilisation ultérieure
+bot.command('register', (ctx) => {
+  const chatId = ctx.chat.id;
+  saveChatId(chatId);
+  ctx.reply(`✅ Chat enregistré: ${chatId}`);
 });
 
 // Commande /help
@@ -72,6 +117,9 @@ bot.command('n8n', async (ctx) => {
 
     // Supprimer le message de chargement
     await ctx.deleteMessage(loadingMsg.message_id);
+
+    // Enregistrer le chatId si inconnu (utile pour tests automatiques)
+    try { saveChatId(ctx.chat.id); } catch (e) { /* non bloquant */ }
 
     // Envoyer la confirmation
     ctx.reply(`✅ Message envoyé avec succès!\n\n📤 Contenu: ${message}`);

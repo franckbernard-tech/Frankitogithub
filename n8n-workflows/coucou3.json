@@ -1,6 +1,5 @@
 {
   "name": "coucou3",
-  "active": false,
   "nodes": [
     {
       "parameters": {
@@ -15,5 +14,6 @@
       "position": [300, 300]
     }
   ],
-  "connections": {}
+  "connections": {},
+  "settings": {}
 }

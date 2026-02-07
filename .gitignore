@@ -41,6 +41,12 @@ n8n_chat_ids.txt
 # Archives et backups
 archive/
 backup/
+backup-*/
 *.backup
 *-old.*
 *-backup.*
+.env.backup*
+create-backup.ps1
+
+# Scripts temporaires
+*.tmp.example

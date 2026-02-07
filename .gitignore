@@ -4,11 +4,16 @@ Thumbs.db
 
 # Fichiers sensibles
 .env
+.env.*
 .env.local
+.env.production
+*.env
 *.key
 *.pem
 credentials/
 secrets/
+*credentials*.json
+*secrets*.json
 
 # Fichiers temporaires
 *.tmp
@@ -29,3 +34,13 @@ yarn-error.log
 # N8N spécifiques
 .n8n/
 n8n-local/
+execution_*.json
+n8n_executions_*.json
+n8n_chat_ids.txt
+
+# Archives et backups
+archive/
+backup/
+*.backup
+*-old.*
+*-backup.*

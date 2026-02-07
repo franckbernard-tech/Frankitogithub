@@ -5,7 +5,8 @@
  * et fournit une interface unifiée pour toute l'application
  */
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const config = {
   telegram: {

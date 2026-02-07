@@ -390,8 +390,13 @@ async function main() {
 
     console.log(colors.green + '🎉 Système sécurisé et prêt pour production !' + colors.reset + '\n');
 
-    // Bell
-    process.stdout.write('\x07');
+    // Bell - PowerShell beep pour Windows
+    try {
+      execSync('powershell -Command "[console]::beep(800,500)"', { stdio: 'ignore' });
+    } catch (e) {
+      // Fallback silencieux
+      process.stdout.write('\x07');
+    }
 
   } catch (error) {
     console.error(colors.red + '\n❌ ERREUR : ' + error.message + colors.reset);

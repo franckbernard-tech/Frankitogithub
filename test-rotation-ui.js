@@ -3,6 +3,8 @@
  * Simule l'exécution sans toucher au .env
  */
 
+const { execSync } = require('child_process');
+
 const colors = {
   reset: '\x1b[0m',
   green: '\x1b[32m',
@@ -97,8 +99,13 @@ setTimeout(() => {
           console.log(colors.white + '   node rotate-credentials.js' + colors.reset);
           console.log('');
 
-          // Bell sound
-          process.stdout.write('\x07');
+          // Bell sound - PowerShell beep pour Windows
+          try {
+            execSync('powershell -Command "[console]::beep(800,500)"', { stdio: 'ignore' });
+          } catch (e) {
+            // Fallback silencieux
+            process.stdout.write('\x07');
+          }
 
         }, 800);
       }, 600);

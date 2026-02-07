@@ -1,0 +1,39 @@
+{
+  "ai_configuration": {
+    "name": "Claude Haiku 4.5",
+    "workspace_path": "C:\\Users\\Bonjour\\Documents\\Frankito-IA",
+    "created_date": "2026-02-06",
+    "last_updated": "2026-02-06"
+  },
+  "workspace_structure": {
+    "root": "Frankito-IA",
+    "folders": [
+      "n8n-skills",
+      ".claude"
+    ],
+    "files": [
+      "README.md",
+      "CLAUDE.md",
+      "INSTALLATION.md",
+      "règles du jeu- automatisation N8N.md",
+      ".gitignore",
+      ".gitmodules",
+      ".mcp.json"
+    ]
+  },
+  "git_configuration": {
+    "initialized": true,
+    "remote_url": "GitHub",
+    "backup_instructions": "Pour récupérer cette configuration sur un nouveau PC:\n1. Cloner le repository GitHub\n2. Placer ce fichier à la racine du projet\n3. Exécuter setup_restoration.ps1 pour restaurer l'environnement"
+  },
+  "development_tools": {
+    "primary_editor": "Visual Studio Code",
+    "ai_assistant": "Claude Haiku 4.5",
+    "automation_platform": "n8n"
+  },
+  "system_requirements": {
+    "os": "Windows",
+    "architecture": "x64",
+    "minimum_storage": "500MB"
+  }
+}

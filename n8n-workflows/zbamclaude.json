@@ -1,0 +1,239 @@
+{
+  "name": "Utility - zbamclaude Test - v1.0",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "notes": "Point d'entr\u00e9e manuel du workflow pour tests"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "Zbam! Workflow de test cr\u00e9\u00e9 par Claude"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "status",
+              "value": "success"
+            }
+          ],
+          "number": [
+            {
+              "name": "executionCount",
+              "value": 1
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Generate Test Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [450, 300],
+      "notes": "G\u00e9n\u00e8re des donn\u00e9es de test avec timestamp et m\u00e9tadonn\u00e9es"
+    },
+    {
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "success"
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Check Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [650, 300],
+      "notes": "Validation de l'\u00e9tat - exemple de gestion conditionnelle"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Workflow zbamclaude ex\u00e9cut\u00e9 avec succ\u00e8s! \ud83d\ude80"
+            },
+            {
+              "name": "originalMessage",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "completedAt",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Format Success Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 200],
+      "notes": "Formate la r\u00e9ponse de succ\u00e8s avec toutes les informations pertinentes"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "error",
+              "value": "Le statut n'est pas 'success'"
+            },
+            {
+              "name": "receivedStatus",
+              "value": "={{ $json.status }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-b8c9-0123-def1-234567890123",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 400],
+      "notes": "Gestion des erreurs - collecte des informations pour debugging"
+    },
+    {
+      "parameters": {},
+      "id": "e5f6a7b8-c9d0-1234-ef12-345678901234",
+      "name": "Success End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1050, 200],
+      "notes": "Fin normale du workflow"
+    },
+    {
+      "parameters": {},
+      "id": "f6a7b8c9-d0e1-2345-f123-456789012345",
+      "name": "Error End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1050, 400],
+      "notes": "Fin du workflow en cas d'erreur"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Test Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Test Data": {
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status": {
+      "main": [
+        [
+          {
+            "node": "Format Success Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success Output": {
+      "main": [
+        [
+          {
+            "node": "Success End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Error End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2026-02-06T00:00:00.000Z",
+      "updatedAt": "2026-02-06T00:00:00.000Z",
+      "id": "1",
+      "name": "test"
+    },
+    {
+      "createdAt": "2026-02-06T00:00:00.000Z",
+      "updatedAt": "2026-02-06T00:00:00.000Z",
+      "id": "2",
+      "name": "utility"
+    }
+  ],
+  "meta": {
+    "instanceId": "claude-code-generated"
+  },
+  "id": "zbamclaude-test-workflow",
+  "versionId": "1.0.0"
+}

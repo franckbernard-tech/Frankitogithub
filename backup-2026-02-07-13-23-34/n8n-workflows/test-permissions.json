@@ -1,0 +1,130 @@
+{
+  "name": "🔍 Test Permissions & Diagnostic",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-1",
+      "name": "Start Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst { execSync } = require('child_process');\n\nconst tests = {\n  timestamp: new Date().toISOString(),\n  environment: {},\n  permissions: {},\n  recommendations: []\n};\n\n// Test environnement\ntry {\n  tests.environment.node_version = process.version;\n  tests.environment.platform = process.platform;\n  tests.environment.cwd = process.cwd();\n  tests.environment.user = execSync('whoami', { encoding: 'utf-8' }).trim();\n  tests.environment.home = process.env.HOME;\n} catch (e) {\n  tests.environment.error = e.message;\n}\n\n// Test 1 : Lecture fichier bot existant\ntry {\n  const stat = fs.statSync('/root/frankito-bot/bot.js');\n  tests.permissions.read_bot_file = true;\n  tests.permissions.bot_file_size = stat.size;\n  tests.permissions.bot_file_modified = stat.mtime;\n} catch (e) {\n  tests.permissions.read_bot_file = false;\n  tests.permissions.read_error = e.message;\n}\n\n// Test 2 : Écriture dans /root/frankito-bot/\ntry {\n  const testPath = '/root/frankito-bot/.n8n-test-write';\n  fs.writeFileSync(testPath, 'test', 'utf-8');\n  fs.unlinkSync(testPath);\n  tests.permissions.write_bot_dir = true;\n} catch (e) {\n  tests.permissions.write_bot_dir = false;\n  tests.permissions.write_error = e.message;\n}\n\n// Test 3 : Écriture dans /tmp/\ntry {\n  fs.writeFileSync('/tmp/n8n-test.txt', 'test', 'utf-8');\n  fs.unlinkSync('/tmp/n8n-test.txt');\n  tests.permissions.write_tmp = true;\n} catch (e) {\n  tests.permissions.write_tmp = false;\n  tests.permissions.write_tmp_error = e.message;\n}\n\n// Test 4 : PM2 accessible\ntry {\n  const pm2Version = execSync('pm2 --version', { encoding: 'utf-8', timeout: 5000 }).trim();\n  tests.permissions.pm2_available = true;\n  tests.permissions.pm2_version = pm2Version;\n  \n  // Test PM2 list\n  const pm2List = execSync('pm2 jlist', { encoding: 'utf-8', timeout: 5000 });\n  const processes = JSON.parse(pm2List);\n  tests.permissions.pm2_processes = processes.length;\n  tests.permissions.pm2_bot_running = processes.some(p => p.name === 'bot');\n} catch (e) {\n  tests.permissions.pm2_available = false;\n  tests.permissions.pm2_error = e.message;\n}\n\n// Test 5 : Execute commands\ntry {\n  execSync('echo test', { encoding: 'utf-8', timeout: 2000 });\n  tests.permissions.exec_commands = true;\n} catch (e) {\n  tests.permissions.exec_commands = false;\n  tests.permissions.exec_error = e.message;\n}\n\n// Test 6 : which pm2 (chemin absolu)\ntry {\n  const pm2Path = execSync('which pm2', { encoding: 'utf-8', timeout: 2000 }).trim();\n  tests.permissions.pm2_path = pm2Path;\n} catch (e) {\n  tests.permissions.pm2_path = 'not found';\n}\n\n// Générer les recommandations\nif (tests.permissions.read_bot_file && tests.permissions.write_bot_dir && tests.permissions.pm2_available && tests.permissions.exec_commands) {\n  tests.recommendations.push('✅ PARFAIT ! Alternative C fonctionnera à 100%');\n  tests.best_method = 'Alternative C (deploy-bot-alternative-C-ssh-method.json)';\n  tests.success_probability = '95%';\n} else if (tests.permissions.write_tmp && tests.permissions.pm2_available) {\n  tests.recommendations.push('✅ Alternative A + B devrait fonctionner');\n  tests.recommendations.push('ℹ️ Utilisez Write Binary File + Webhook Helper');\n  tests.best_method = 'Alternative A + B';\n  tests.success_probability = '85%';\n} else if (!tests.permissions.exec_commands) {\n  tests.recommendations.push('⚠️ Execute Commands désactivé');\n  tests.recommendations.push('🔧 Activez avec: export N8N_ENABLE_EXECUTE_COMMAND=true');\n  tests.best_method = 'Activer Execute Command d\\'abord';\n  tests.success_probability = '0% (action requise)';\n} else {\n  tests.recommendations.push('❌ Permissions insuffisantes');\n  tests.recommendations.push('🔧 Solution: sudo chown -R $(whoami) /root/frankito-bot/');\n  tests.best_method = 'Corriger les permissions d\\'abord';\n  tests.success_probability = '0% (action requise)';\n}\n\n// Vérifier n8n settings\ntry {\n  const n8nExecuteCommandEnabled = process.env.N8N_ENABLE_EXECUTE_COMMAND;\n  tests.environment.n8n_execute_command = n8nExecuteCommandEnabled || 'not set';\n  \n  if (n8nExecuteCommandEnabled !== 'true') {\n    tests.recommendations.push('💡 Conseil: Activez N8N_ENABLE_EXECUTE_COMMAND=true pour plus d\\'options');\n  }\n} catch (e) {\n  // ignore\n}\n\nreturn tests;"
+      },
+      "id": "code-node-1",
+      "name": "Run Diagnostic Tests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "🎯 Méthode recommandée",
+              "value": "={{ $json.best_method }}"
+            },
+            {
+              "name": "📊 Probabilité de succès",
+              "value": "={{ $json.success_probability }}"
+            },
+            {
+              "name": "👤 User actuel",
+              "value": "={{ $json.environment.user }}"
+            },
+            {
+              "name": "📂 Working directory",
+              "value": "={{ $json.environment.cwd }}"
+            },
+            {
+              "name": "✅ Lecture bot.js",
+              "value": "={{ $json.permissions.read_bot_file ? 'OUI' : 'NON' }}"
+            },
+            {
+              "name": "✅ Écriture bot dir",
+              "value": "={{ $json.permissions.write_bot_dir ? 'OUI' : 'NON' }}"
+            },
+            {
+              "name": "✅ PM2 disponible",
+              "value": "={{ $json.permissions.pm2_available ? 'OUI (' + $json.permissions.pm2_version + ')' : 'NON' }}"
+            },
+            {
+              "name": "✅ Execute commands",
+              "value": "={{ $json.permissions.exec_commands ? 'OUI' : 'NON' }}"
+            },
+            {
+              "name": "📍 Chemin PM2",
+              "value": "={{ $json.permissions.pm2_path }}"
+            },
+            {
+              "name": "🤖 Bot PM2 actif",
+              "value": "={{ $json.permissions.pm2_bot_running ? 'OUI' : 'NON' }}"
+            }
+          ]
+        }
+      },
+      "id": "set-node-1",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Générer un rapport HTML lisible\nconst data = $input.first().json;\n\nconst html = `\n<h2>🔍 Rapport de Diagnostic N8N</h2>\n<p><strong>Timestamp:</strong> ${data.timestamp}</p>\n<hr>\n\n<h3>🎯 Résultat</h3>\n<div style=\"background: ${data.success_probability.includes('95') ? '#d4edda' : data.success_probability.includes('85') ? '#fff3cd' : '#f8d7da'}; padding: 15px; border-radius: 5px; margin: 10px 0;\">\n  <h4>${data.best_method}</h4>\n  <p><strong>Probabilité de succès:</strong> ${data.success_probability}</p>\n</div>\n\n<h3>💡 Recommandations</h3>\n<ul>\n${data.recommendations.map(r => `  <li>${r}</li>`).join('\\n')}\n</ul>\n\n<h3>🖥️ Environnement</h3>\n<table border=\"1\" cellpadding=\"5\" style=\"border-collapse: collapse;\">\n  <tr><td><strong>User</strong></td><td>${data.environment.user}</td></tr>\n  <tr><td><strong>Node Version</strong></td><td>${data.environment.node_version}</td></tr>\n  <tr><td><strong>Platform</strong></td><td>${data.environment.platform}</td></tr>\n  <tr><td><strong>Working Dir</strong></td><td>${data.environment.cwd}</td></tr>\n  <tr><td><strong>Home</strong></td><td>${data.environment.home}</td></tr>\n  <tr><td><strong>N8N Execute Command</strong></td><td>${data.environment.n8n_execute_command || 'not set'}</td></tr>\n</table>\n\n<h3>🔐 Permissions</h3>\n<table border=\"1\" cellpadding=\"5\" style=\"border-collapse: collapse;\">\n  <tr><td><strong>Lecture bot.js</strong></td><td style=\"color: ${data.permissions.read_bot_file ? 'green' : 'red'}\">${data.permissions.read_bot_file ? '✅ OUI' : '❌ NON'}</td></tr>\n  <tr><td><strong>Écriture /root/frankito-bot/</strong></td><td style=\"color: ${data.permissions.write_bot_dir ? 'green' : 'red'}\">${data.permissions.write_bot_dir ? '✅ OUI' : '❌ NON'}</td></tr>\n  <tr><td><strong>Écriture /tmp/</strong></td><td style=\"color: ${data.permissions.write_tmp ? 'green' : 'red'}\">${data.permissions.write_tmp ? '✅ OUI' : '❌ NON'}</td></tr>\n  <tr><td><strong>PM2 disponible</strong></td><td style=\"color: ${data.permissions.pm2_available ? 'green' : 'red'}\">${data.permissions.pm2_available ? '✅ OUI' : '❌ NON'}</td></tr>\n  <tr><td><strong>PM2 Version</strong></td><td>${data.permissions.pm2_version || 'N/A'}</td></tr>\n  <tr><td><strong>PM2 Path</strong></td><td>${data.permissions.pm2_path}</td></tr>\n  <tr><td><strong>Bot PM2 actif</strong></td><td style=\"color: ${data.permissions.pm2_bot_running ? 'green' : 'orange'}\">${data.permissions.pm2_bot_running ? '✅ OUI' : '⚠️ NON'}</td></tr>\n  <tr><td><strong>Execute Commands</strong></td><td style=\"color: ${data.permissions.exec_commands ? 'green' : 'red'}\">${data.permissions.exec_commands ? '✅ OUI' : '❌ NON'}</td></tr>\n</table>\n\n<hr>\n<p><em>Généré par n8n Test Permissions Workflow</em></p>\n`;\n\nreturn {\n  html: html,\n  raw_data: data\n};"
+      },
+      "id": "code-node-2",
+      "name": "Generate HTML Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Start Test": {
+      "main": [
+        [
+          {
+            "node": "Run Diagnostic Tests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Diagnostic Tests": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Generate HTML Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["diagnostic", "test", "permissions"],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-06T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Script de rotation sécurisée des credentials
  * Usage: node rotate-credentials.js

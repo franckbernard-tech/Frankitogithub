@@ -1,0 +1,12 @@
+mkdir -p /root/frankito-bot && cd /root/frankito-bot && cat > bot.js << 'XEOF'
+const { Telegraf } = require('telegraf');
+const bot = new Telegraf('8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE');
+bot.start((ctx) => ctx.reply('👋 Bienvenue sur Frankito Bot!\n\nCommandes:\n/start - Afficher ce message\n/ping - Tester le bot\n/help - Aide'));
+bot.command('ping', (ctx) => { console.log('🏓 Ping'); ctx.reply('🏓 Pong !'); });
+bot.help((ctx) => ctx.reply('📖 Aide:\n/start - Bienvenue\n/ping - Test\n/help - Cette aide'));
+bot.catch((e) => console.error('❌', e));
+bot.launch().then(() => console.log('✅ Bot démarré!'));
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
+XEOF
+echo '{"name":"frankito-bot","version":"1.0.0","main":"bot.js","dependencies":{"telegraf":"^4.12.2"}}' > package.json && npm install --production && pm2 delete frankito-bot 2>/dev/null; pm2 start bot.js --name frankito-bot --time && pm2 save && sleep 3 && pm2 list && echo "" && pm2 logs frankito-bot --lines 5 --nostream && echo "" && if pm2 jlist | grep -q '"status":"online".*frankito-bot'; then echo "✅ BOT STATUS: ONLINE"; else echo "⚠️ Bot non online, vérifiez les logs"; fi

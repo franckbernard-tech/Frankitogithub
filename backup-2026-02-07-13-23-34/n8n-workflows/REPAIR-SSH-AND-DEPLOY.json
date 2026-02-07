@@ -1,0 +1,102 @@
+{
+  "name": "🔧 URGENCE - Réparer SSH + Déployer Bot",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "START",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { execSync } = require('child_process');\nconst log = [];\n\ntry {\n  log.push('🔧 ÉTAPE 1 : Réparation SSH...');\n  \n  // Vérifier le fichier SSH config actuel\n  const currentConfig = execSync('cat /etc/ssh/sshd_config | grep \"^Port\"', { encoding: 'utf-8' }).trim();\n  log.push('📋 Configuration SSH actuelle: ' + currentConfig);\n  \n  // Remettre SSH sur port 22\n  log.push('🔄 Remise sur port 22...');\n  execSync('sed -i \"s/^Port 2222/#Port 22/g\" /etc/ssh/sshd_config', { encoding: 'utf-8' });\n  execSync('sed -i \"s/^#Port 22/Port 22/g\" /etc/ssh/sshd_config', { encoding: 'utf-8' });\n  \n  // Vérifier la nouvelle config\n  const newConfig = execSync('cat /etc/ssh/sshd_config | grep \"Port\"', { encoding: 'utf-8' }).trim();\n  log.push('✅ Nouvelle configuration: ' + newConfig);\n  \n  // Redémarrer SSH\n  log.push('🔄 Redémarrage service SSH...');\n  try {\n    execSync('systemctl restart sshd', { encoding: 'utf-8', timeout: 5000 });\n    log.push('✅ SSH redémarré (systemctl)');\n  } catch (e) {\n    execSync('service ssh restart', { encoding: 'utf-8', timeout: 5000 });\n    log.push('✅ SSH redémarré (service)');\n  }\n  \n  // Vérifier que SSH écoute sur port 22\n  const sshStatus = execSync('ss -tlnp | grep :22 || netstat -tlnp | grep :22', { encoding: 'utf-8' }).trim();\n  log.push('✅ SSH écoute maintenant sur port 22');\n  log.push('📊 ' + sshStatus);\n  \n  return {\n    success: true,\n    step: 'ssh_repaired',\n    log: log,\n    ssh_status: sshStatus\n  };\n  \n} catch (error) {\n  log.push('❌ ERREUR: ' + error.message);\n  return {\n    success: false,\n    error: error.message,\n    log: log\n  };\n}"
+      },
+      "name": "1️⃣ Réparer SSH",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst { execSync } = require('child_process');\nconst log = [];\n\ntry {\n  log.push('🤖 ÉTAPE 2 : Déploiement du bot...');\n  \n  // Créer le répertoire\n  log.push('📁 Création /root/frankito-bot/');\n  execSync('mkdir -p /root/frankito-bot', { encoding: 'utf-8' });\n  \n  // Créer bot.js\n  log.push('📝 Création bot.js...');\n  const botCode = `const { Telegraf } = require('telegraf');\n\nconst BOT_TOKEN = '8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE';\nconst bot = new Telegraf(BOT_TOKEN);\n\nbot.start((ctx) => {\n  ctx.reply('👋 Bienvenue sur Frankito Bot!\\\\n\\\\nCommandes:\\\\n/start - Afficher ce message\\\\n/ping - Tester le bot');\n});\n\nbot.command('ping', (ctx) => {\n  ctx.reply('🏓 Pong !');\n});\n\nbot.catch((err) => console.error('❌ Erreur:', err));\nbot.launch();\nconsole.log('✅ Frankito Bot démarré!');\nprocess.once('SIGINT', () => bot.stop('SIGINT'));\nprocess.once('SIGTERM', () => bot.stop('SIGTERM'));\n`;\n  \n  fs.writeFileSync('/root/frankito-bot/bot.js', botCode, { encoding: 'utf-8' });\n  log.push('✅ bot.js créé (' + botCode.length + ' bytes)');\n  \n  // Créer package.json\n  log.push('📦 Création package.json...');\n  const pkg = { name: 'frankito-bot', version: '1.0.0', main: 'bot.js', dependencies: { telegraf: '^4.12.2' } };\n  fs.writeFileSync('/root/frankito-bot/package.json', JSON.stringify(pkg, null, 2));\n  \n  // Installer dépendances\n  log.push('📥 Installation telegraf (30-60s)...');\n  const npmOut = execSync('cd /root/frankito-bot && npm install --production 2>&1', { \n    encoding: 'utf-8',\n    timeout: 90000\n  });\n  log.push('✅ Dépendances installées');\n  \n  // Arrêter ancien processus PM2\n  log.push('🔄 Nettoyage PM2...');\n  try {\n    execSync('pm2 delete frankito-bot', { encoding: 'utf-8' });\n    log.push('⚠️ Ancien processus supprimé');\n  } catch (e) {\n    log.push('ℹ️ Pas de processus existant');\n  }\n  \n  // Lancer avec PM2\n  log.push('🚀 Lancement PM2...');\n  const pm2Out = execSync('cd /root/frankito-bot && pm2 start bot.js --name frankito-bot', {\n    encoding: 'utf-8',\n    timeout: 15000\n  });\n  log.push('✅ Bot lancé avec PM2');\n  \n  // Sauvegarder PM2\n  log.push('💾 Configuration auto-start...');\n  execSync('pm2 save', { encoding: 'utf-8' });\n  log.push('✅ PM2 sauvegardé');\n  \n  // Récupérer statut\n  const statusJson = execSync('pm2 jlist', { encoding: 'utf-8' });\n  const processes = JSON.parse(statusJson);\n  const bot = processes.find(p => p.name === 'frankito-bot');\n  \n  if (!bot) throw new Error('Bot non trouvé dans PM2');\n  \n  // Récupérer logs\n  let logs = '';\n  try {\n    logs = execSync('pm2 logs frankito-bot --lines 5 --nostream 2>&1', { \n      encoding: 'utf-8',\n      timeout: 5000\n    });\n  } catch (e) {\n    logs = 'Logs non immédiatement disponibles';\n  }\n  \n  log.push('🎉 DÉPLOIEMENT TERMINÉ!');\n  \n  return {\n    success: true,\n    step: 'bot_deployed',\n    status: bot.pm2_env.status,\n    pid: bot.pid,\n    uptime_seconds: Math.round((Date.now() - bot.pm2_env.pm_uptime) / 1000),\n    memory_mb: Math.round(bot.monit.memory / 1024 / 1024),\n    cpu: bot.monit.cpu,\n    restarts: bot.pm2_env.restart_time,\n    logs: logs,\n    log: log\n  };\n  \n} catch (error) {\n  log.push('❌ ERREUR: ' + error.message);\n  return {\n    success: false,\n    error: error.message,\n    log: log\n  };\n}"
+      },
+      "name": "2️⃣ Déployer Bot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "name": "Succès?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "🎉 RÉSULTAT", "value": "SUCCÈS COMPLET" },
+            { "name": "✅ SSH", "value": "Réparé et sur port 22" },
+            { "name": "🤖 Bot Status", "value": "={{ $json.status }}" },
+            { "name": "🆔 PID", "value": "={{ $json.pid }}" },
+            { "name": "⏱️ Uptime", "value": "={{ $json.uptime_seconds }} secondes" },
+            { "name": "💾 RAM", "value": "={{ $json.memory_mb }} MB" },
+            { "name": "⚡ CPU", "value": "={{ $json.cpu }}%" },
+            { "name": "🔄 Restarts", "value": "={{ $json.restarts }}" },
+            { "name": "📜 Logs", "value": "={{ $json.logs }}" },
+            { "name": "📋 Log installation", "value": "={{ $json.log.join('\\n') }}" },
+            { "name": "💡 SSH Access", "value": "ssh root@72.62.232.53 -p 22" }
+          ]
+        }
+      },
+      "name": "✅ SUCCÈS",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "❌ RÉSULTAT", "value": "ÉCHEC" },
+            { "name": "⚠️ Erreur", "value": "={{ $json.error }}" },
+            { "name": "📋 Log", "value": "={{ $json.log.join('\\n') }}" }
+          ]
+        }
+      },
+      "name": "❌ ÉCHEC",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    }
+  ],
+  "connections": {
+    "START": {
+      "main": [[{ "node": "1️⃣ Réparer SSH", "type": "main", "index": 0 }]]
+    },
+    "1️⃣ Réparer SSH": {
+      "main": [[{ "node": "2️⃣ Déployer Bot", "type": "main", "index": 0 }]]
+    },
+    "2️⃣ Déployer Bot": {
+      "main": [[{ "node": "Succès?", "type": "main", "index": 0 }]]
+    },
+    "Succès?": {
+      "main": [
+        [{ "node": "✅ SUCCÈS", "type": "main", "index": 0 }],
+        [{ "node": "❌ ÉCHEC", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {}
+}

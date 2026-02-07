@@ -1,0 +1,149 @@
+{
+  "name": "🚀 Deploy Bot - Alternative C (SSH via Code)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Code du bot à déployer\nconst botCode = `const { Telegraf } = require('telegraf');\nconst axios = require('axios');\nconst BOT_TOKEN = '8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE';\nconst N8N_API = 'https://n8n.srv1289936.hstgr.cloud/api/v1/workflows';\nconst N8N_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4YWVhYjY1Ny04ZDU0LTRmYTQtYWYzYi0zYzQzODM3ZWY0MWMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiOTIxMmNjOWUtYTBiMC00ZjkxLWI1MjgtYjk3MDI3NjJkNTY3IiwiaWF0IjoxNzcwMzg0NDA3fQ.bU1XT4VoSyMVQOSV4byi5tMTjMZDacb9T_g44VPQ_jI';\n\nconst bot = new Telegraf(BOT_TOKEN);\n\nbot.command('n8n', async (ctx) => {\n  const msg = ctx.message.text.replace('/n8n', '').trim();\n  if (!msg) return ctx.reply('Usage: /n8n <message>');\n  \n  try {\n    const workflow = {\n      name: \\`Auto-\\${Date.now()}\\`,\n      nodes: [\n        {\n          parameters: {},\n          name: 'Start',\n          type: 'n8n-nodes-base.manualTrigger',\n          typeVersion: 1,\n          position: [250, 300]\n        },\n        {\n          parameters: {\n            values: {\n              string: [{ name: 'request', value: msg }]\n            }\n          },\n          name: 'Data',\n          type: 'n8n-nodes-base.set',\n          typeVersion: 3.4,\n          position: [450, 300]\n        }\n      ],\n      connections: { 'Start': { main: [[{ node: 'Data', type: 'main', index: 0 }]] } }\n    };\n    \n    const res = await axios.post(N8N_API, workflow, {\n      headers: { 'X-N8N-API-KEY': N8N_KEY, 'Content-Type': 'application/json' }\n    });\n    \n    ctx.reply(\\`✅ Workflow créé!\\\\nID: \\${res.data.id}\\\\nURL: https://n8n.srv1289936.hstgr.cloud/workflow/\\${res.data.id}\\`);\n  } catch (err) {\n    ctx.reply(\\`❌ Erreur: \\${err.message}\\`);\n  }\n});\n\nbot.start(ctx => ctx.reply('Bot prêt! Utilisez /n8n <message>'));\nbot.launch();\nconsole.log('✅ Bot démarré');\nprocess.once('SIGINT', () => bot.stop('SIGINT'));\nprocess.once('SIGTERM', () => bot.stop('SIGTERM'));\n`;\n\nconst fs = require('fs');\nconst { execSync } = require('child_process');\n\ntry {\n  // Méthode 1 : Écriture directe (si n8n tourne sur le même serveur)\n  fs.writeFileSync('/root/frankito-bot/bot.js', botCode, { encoding: 'utf-8' });\n  \n  // Méthode 2 : Redémarrer PM2\n  const output = execSync('cd /root/frankito-bot && pm2 restart all', {\n    encoding: 'utf-8',\n    timeout: 10000\n  });\n  \n  const status = execSync('pm2 status', { encoding: 'utf-8' });\n  \n  return {\n    success: true,\n    method: 'Direct File Write + execSync',\n    file_written: '/root/frankito-bot/bot.js',\n    file_size: botCode.length,\n    pm2_output: output,\n    pm2_status: status,\n    timestamp: new Date().toISOString()\n  };\n  \n} catch (error) {\n  // Si méthode 1 échoue, fallback sur d'autres méthodes\n  return {\n    success: false,\n    error: error.message,\n    suggestion: 'Utilisez Alternative A (Write Binary File) ou Alternative B (Webhook Helper)',\n    timestamp: new Date().toISOString()\n  };\n}"
+      },
+      "id": "code-node-1",
+      "name": "Deploy via FS + Exec",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-node-1",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "✅ Déploiement réussi!"
+            },
+            {
+              "name": "method",
+              "value": "={{ $json.method }}"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.file_written }}"
+            },
+            {
+              "name": "size",
+              "value": "={{ $json.file_size }} bytes"
+            },
+            {
+              "name": "pm2_status",
+              "value": "={{ $json.pm2_status }}"
+            }
+          ]
+        }
+      },
+      "id": "set-success",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "❌ Échec du déploiement"
+            },
+            {
+              "name": "error",
+              "value": "={{ $json.error }}"
+            },
+            {
+              "name": "suggestion",
+              "value": "={{ $json.suggestion }}"
+            }
+          ]
+        }
+      },
+      "id": "set-error",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Deploy via FS + Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deploy via FS + Exec": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["deployment", "fallback"],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-06T00:00:00.000Z",
+  "versionId": "1"
+}

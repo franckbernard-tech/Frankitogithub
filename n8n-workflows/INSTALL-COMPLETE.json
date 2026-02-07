@@ -1,0 +1,89 @@
+{
+  "name": "🎯 INSTALLATION COMPLÈTE - Frankito Bot",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "START",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst { execSync } = require('child_process');\n\nconst log = [];\nconst addLog = (msg) => { log.push(msg); console.log(msg); };\n\ntry {\n  // ÉTAPE 1 : Créer le répertoire\n  addLog('📁 Création du répertoire /root/frankito-bot/');\n  execSync('mkdir -p /root/frankito-bot', { encoding: 'utf-8' });\n  addLog('✅ Répertoire créé');\n\n  // ÉTAPE 2 : Créer bot.js\n  addLog('📝 Création de bot.js...');\n  const botCode = `const { Telegraf } = require('telegraf');\n\nconst BOT_TOKEN = '8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE';\nconst bot = new Telegraf(BOT_TOKEN);\n\n// Commande /start\nbot.start((ctx) => {\n  ctx.reply('👋 Bienvenue sur Frankito Bot!\\\\n\\\\nCommandes disponibles:\\\\n/start - Afficher ce message\\\\n/ping - Tester le bot');\n});\n\n// Commande /ping\nbot.command('ping', (ctx) => {\n  ctx.reply('🏓 Pong !');\n});\n\n// Gestion des erreurs\nbot.catch((err) => {\n  console.error('❌ Erreur Bot:', err);\n});\n\n// Lancement\nbot.launch();\nconsole.log('✅ Frankito Bot démarré!');\n\n// Graceful shutdown\nprocess.once('SIGINT', () => bot.stop('SIGINT'));\nprocess.once('SIGTERM', () => bot.stop('SIGTERM'));\n`;\n\n  fs.writeFileSync('/root/frankito-bot/bot.js', botCode, { encoding: 'utf-8' });\n  addLog('✅ bot.js créé (' + botCode.length + ' bytes)');\n\n  // ÉTAPE 3 : Créer package.json\n  addLog('📦 Création de package.json...');\n  const packageJson = {\n    name: 'frankito-bot',\n    version: '1.0.0',\n    description: 'Bot Telegram Frankito',\n    main: 'bot.js',\n    scripts: { start: 'node bot.js' },\n    dependencies: { telegraf: '^4.12.2' }\n  };\n  fs.writeFileSync('/root/frankito-bot/package.json', JSON.stringify(packageJson, null, 2), { encoding: 'utf-8' });\n  addLog('✅ package.json créé');\n\n  // ÉTAPE 4 : Installer les dépendances\n  addLog('📥 Installation de telegraf (peut prendre 30s)...');\n  const npmInstall = execSync('cd /root/frankito-bot && npm install --production', { \n    encoding: 'utf-8',\n    timeout: 60000\n  });\n  addLog('✅ telegraf installé');\n\n  // ÉTAPE 5 : Arrêter PM2 existant si présent\n  addLog('🔄 Vérification PM2...');\n  try {\n    execSync('pm2 delete frankito-bot', { encoding: 'utf-8' });\n    addLog('⚠️ Ancien processus supprimé');\n  } catch (e) {\n    addLog('ℹ️ Aucun processus existant');\n  }\n\n  // ÉTAPE 6 : Lancer avec PM2\n  addLog('🚀 Lancement avec PM2...');\n  const pm2Start = execSync('cd /root/frankito-bot && pm2 start bot.js --name frankito-bot', {\n    encoding: 'utf-8',\n    timeout: 15000\n  });\n  addLog('✅ Bot lancé avec PM2');\n\n  // ÉTAPE 7 : Sauvegarder PM2\n  addLog('💾 Configuration PM2 pour démarrage auto...');\n  execSync('pm2 save', { encoding: 'utf-8' });\n  addLog('✅ PM2 sauvegardé');\n\n  // ÉTAPE 8 : Récupérer le statut\n  addLog('📊 Récupération du statut...');\n  const pm2Status = execSync('pm2 jlist', { encoding: 'utf-8', timeout: 5000 });\n  const processes = JSON.parse(pm2Status);\n  const botProcess = processes.find(p => p.name === 'frankito-bot');\n\n  if (!botProcess) {\n    throw new Error('Bot non trouvé dans PM2');\n  }\n\n  // ÉTAPE 9 : Récupérer les logs\n  addLog('📜 Récupération des logs...');\n  let logs = '';\n  try {\n    logs = execSync('pm2 logs frankito-bot --lines 5 --nostream', { \n      encoding: 'utf-8',\n      timeout: 5000\n    });\n  } catch (e) {\n    logs = 'Logs non disponibles immédiatement';\n  }\n\n  addLog('🎉 INSTALLATION TERMINÉE!');\n\n  return {\n    success: true,\n    status: botProcess.pm2_env.status,\n    pid: botProcess.pid,\n    uptime: Math.round((Date.now() - botProcess.pm2_env.pm_uptime) / 1000),\n    memory: Math.round(botProcess.monit.memory / 1024 / 1024),\n    cpu: botProcess.monit.cpu,\n    restarts: botProcess.pm2_env.restart_time,\n    logs: logs,\n    full_log: log,\n    timestamp: new Date().toISOString()\n  };\n\n} catch (error) {\n  addLog('❌ ERREUR: ' + error.message);\n  return {\n    success: false,\n    error: error.message,\n    stack: error.stack,\n    full_log: log\n  };\n}"
+      },
+      "name": "Installation Complète",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "name": "Succès?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "🎉 STATUT", "value": "INSTALLATION RÉUSSIE" },
+            { "name": "🤖 Status", "value": "={{ $json.status }}" },
+            { "name": "🆔 PID", "value": "={{ $json.pid }}" },
+            { "name": "⏱️ Uptime", "value": "={{ $json.uptime }} secondes" },
+            { "name": "💾 RAM", "value": "={{ $json.memory }} MB" },
+            { "name": "⚡ CPU", "value": "={{ $json.cpu }}%" },
+            { "name": "🔄 Restarts", "value": "={{ $json.restarts }}" },
+            { "name": "📜 Logs (5 dernières lignes)", "value": "={{ $json.logs }}" },
+            { "name": "📋 Log complet", "value": "={{ $json.full_log.join('\\n') }}" }
+          ]
+        }
+      },
+      "name": "✅ SUCCÈS",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "❌ STATUT", "value": "ÉCHEC" },
+            { "name": "⚠️ Erreur", "value": "={{ $json.error }}" },
+            { "name": "📋 Log complet", "value": "={{ $json.full_log.join('\\n') }}" },
+            { "name": "🔍 Stack", "value": "={{ $json.stack }}" }
+          ]
+        }
+      },
+      "name": "❌ ÉCHEC",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "START": {
+      "main": [[{ "node": "Installation Complète", "type": "main", "index": 0 }]]
+    },
+    "Installation Complète": {
+      "main": [[{ "node": "Succès?", "type": "main", "index": 0 }]]
+    },
+    "Succès?": {
+      "main": [
+        [{ "node": "✅ SUCCÈS", "type": "main", "index": 0 }],
+        [{ "node": "❌ ÉCHEC", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {}
+}

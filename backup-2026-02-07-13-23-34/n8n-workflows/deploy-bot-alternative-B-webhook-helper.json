@@ -1,0 +1,74 @@
+{
+  "name": "🔧 Helper - PM2 Restart Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "restart-pm2",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "restart-pm2-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Utiliser child_process pour exécuter les commandes\nconst { execSync } = require('child_process');\n\ntry {\n  // Redémarrer PM2\n  const restartOutput = execSync('cd /root/frankito-bot && pm2 restart all', {\n    encoding: 'utf-8',\n    timeout: 10000\n  });\n  \n  // Obtenir le statut\n  const statusOutput = execSync('pm2 status', {\n    encoding: 'utf-8',\n    timeout: 5000\n  });\n  \n  return {\n    success: true,\n    restart_output: restartOutput,\n    status: statusOutput,\n    timestamp: new Date().toISOString()\n  };\n} catch (error) {\n  return {\n    success: false,\n    error: error.message,\n    stderr: error.stderr?.toString(),\n    timestamp: new Date().toISOString()\n  };\n}"
+      },
+      "id": "code-node-1",
+      "name": "Execute PM2 Restart",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook-1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute PM2 Restart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute PM2 Restart": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["helper", "pm2", "deployment"],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-06T00:00:00.000Z",
+  "versionId": "1"
+}

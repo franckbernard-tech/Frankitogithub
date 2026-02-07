@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Script de nettoyage final après rotation des credentials
  * Usage: node cleanup-final.js

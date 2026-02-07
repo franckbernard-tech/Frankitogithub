@@ -1,0 +1,46 @@
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers sensibles
+.env
+.env.*
+.env.local
+.env.production
+*.env
+*.key
+*.pem
+credentials/
+secrets/
+*credentials*.json
+*secrets*.json
+
+# Fichiers temporaires
+*.tmp
+*.log
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Node modules si vous utilisez des scripts
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# N8N spécifiques
+.n8n/
+n8n-local/
+execution_*.json
+n8n_executions_*.json
+n8n_chat_ids.txt
+
+# Archives et backups
+archive/
+backup/
+*.backup
+*-old.*
+*-backup.*

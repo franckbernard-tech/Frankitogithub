@@ -1,0 +1,135 @@
+{
+  "name": "🔧 Réparer SSH + Déployer (Nodes Natifs)",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "START",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "sed -i 's/Port 2222/Port 22/g' /etc/ssh/sshd_config && sed -i 's/#Port 22/Port 22/g' /etc/ssh/sshd_config && systemctl restart sshd && echo 'SSH réparé sur port 22'"
+      },
+      "name": "1️⃣ Réparer SSH",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "command": "ss -tlnp | grep :22 || netstat -tlnp | grep :22"
+      },
+      "name": "Vérifier SSH port 22",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "command": "mkdir -p /root/frankito-bot"
+      },
+      "name": "2️⃣ Créer répertoire",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "command": "cat > /root/frankito-bot/bot.js << 'EOFBOT'\nconst { Telegraf } = require('telegraf');\n\nconst BOT_TOKEN = '8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE';\nconst bot = new Telegraf(BOT_TOKEN);\n\nbot.start((ctx) => {\n  ctx.reply('👋 Bienvenue sur Frankito Bot!\\n\\nCommandes:\\n/start - Afficher ce message\\n/ping - Tester le bot');\n});\n\nbot.command('ping', (ctx) => {\n  ctx.reply('🏓 Pong !');\n});\n\nbot.catch((err) => console.error('❌ Erreur:', err));\nbot.launch();\nconsole.log('✅ Frankito Bot démarré!');\nprocess.once('SIGINT', () => bot.stop('SIGINT'));\nprocess.once('SIGTERM', () => bot.stop('SIGTERM'));\nEOFBOT\necho 'bot.js créé'"
+      },
+      "name": "Créer bot.js",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "command": "cat > /root/frankito-bot/package.json << 'EOFPKG'\n{\n  \"name\": \"frankito-bot\",\n  \"version\": \"1.0.0\",\n  \"main\": \"bot.js\",\n  \"dependencies\": {\n    \"telegraf\": \"^4.12.2\"\n  }\n}\nEOFPKG\necho 'package.json créé'"
+      },
+      "name": "Créer package.json",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /root/frankito-bot && npm install --production"
+      },
+      "name": "3️⃣ Installer telegraf",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "command": "pm2 delete frankito-bot || echo 'Pas de processus existant'"
+      },
+      "name": "Nettoyer PM2",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /root/frankito-bot && pm2 start bot.js --name frankito-bot"
+      },
+      "name": "4️⃣ Lancer avec PM2",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "command": "pm2 save"
+      },
+      "name": "Sauvegarder PM2",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "command": "pm2 list && echo '---' && pm2 logs frankito-bot --lines 5 --nostream"
+      },
+      "name": "5️⃣ Statut Final",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2250, 300]
+    }
+  ],
+  "connections": {
+    "START": {
+      "main": [[{ "node": "1️⃣ Réparer SSH", "type": "main", "index": 0 }]]
+    },
+    "1️⃣ Réparer SSH": {
+      "main": [[{ "node": "Vérifier SSH port 22", "type": "main", "index": 0 }]]
+    },
+    "Vérifier SSH port 22": {
+      "main": [[{ "node": "2️⃣ Créer répertoire", "type": "main", "index": 0 }]]
+    },
+    "2️⃣ Créer répertoire": {
+      "main": [[{ "node": "Créer bot.js", "type": "main", "index": 0 }]]
+    },
+    "Créer bot.js": {
+      "main": [[{ "node": "Créer package.json", "type": "main", "index": 0 }]]
+    },
+    "Créer package.json": {
+      "main": [[{ "node": "3️⃣ Installer telegraf", "type": "main", "index": 0 }]]
+    },
+    "3️⃣ Installer telegraf": {
+      "main": [[{ "node": "Nettoyer PM2", "type": "main", "index": 0 }]]
+    },
+    "Nettoyer PM2": {
+      "main": [[{ "node": "4️⃣ Lancer avec PM2", "type": "main", "index": 0 }]]
+    },
+    "4️⃣ Lancer avec PM2": {
+      "main": [[{ "node": "Sauvegarder PM2", "type": "main", "index": 0 }]]
+    },
+    "Sauvegarder PM2": {
+      "main": [[{ "node": "5️⃣ Statut Final", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}

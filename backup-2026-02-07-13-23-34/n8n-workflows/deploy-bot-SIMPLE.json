@@ -1,0 +1,222 @@
+{
+  "name": "🚀 Deploy Bot SIMPLE (No Execute Command)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Démarrer",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ============================================\n// ÉTAPE 1 : Préparer le code du bot\n// ============================================\n\nconst botCode = `const { Telegraf } = require('telegraf');\nconst axios = require('axios');\nconst BOT_TOKEN = '8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE';\nconst N8N_API = 'https://n8n.srv1289936.hstgr.cloud/api/v1/workflows';\nconst N8N_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4YWVhYjY1Ny04ZDU0LTRmYTQtYWYzYi0zYzQzODM3ZWY0MWMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiOTIxMmNjOWUtYTBiMC00ZjkxLWI1MjgtYjk3MDI3NjJkNTY3IiwiaWF0IjoxNzcwMzg0NDA3fQ.bU1XT4VoSyMVQOSV4byi5tMTjMZDacb9T_g44VPQ_jI';\n\nconst bot = new Telegraf(BOT_TOKEN);\n\nbot.command('n8n', async (ctx) => {\n  const msg = ctx.message.text.replace('/n8n', '').trim();\n  if (!msg) return ctx.reply('Usage: /n8n <message>');\n  \n  try {\n    const workflow = {\n      name: \\`Auto-\\${Date.now()}\\`,\n      nodes: [\n        {\n          parameters: {},\n          name: 'Start',\n          type: 'n8n-nodes-base.manualTrigger',\n          typeVersion: 1,\n          position: [250, 300]\n        },\n        {\n          parameters: {\n            values: {\n              string: [{ name: 'request', value: msg }]\n            }\n          },\n          name: 'Data',\n          type: 'n8n-nodes-base.set',\n          typeVersion: 3.4,\n          position: [450, 300]\n        }\n      ],\n      connections: { 'Start': { main: [[{ node: 'Data', type: 'main', index: 0 }]] } }\n    };\n    \n    const res = await axios.post(N8N_API, workflow, {\n      headers: { 'X-N8N-API-KEY': N8N_KEY, 'Content-Type': 'application/json' }\n    });\n    \n    ctx.reply(\\`✅ Workflow créé!\\\\nID: \\${res.data.id}\\\\nURL: https://n8n.srv1289936.hstgr.cloud/workflow/\\${res.data.id}\\`);\n  } catch (err) {\n    ctx.reply(\\`❌ Erreur: \\${err.message}\\`);\n  }\n});\n\nbot.start(ctx => ctx.reply('Bot prêt! Utilisez /n8n <message>'));\nbot.launch();\nconsole.log('✅ Bot démarré');\nprocess.once('SIGINT', () => bot.stop('SIGINT'));\nprocess.once('SIGTERM', () => bot.stop('SIGTERM'));\n`;\n\n// ============================================\n// ÉTAPE 2 : Écrire le fichier sur le disque\n// ============================================\n\nconst fs = require('fs');\nconst { execSync } = require('child_process');\nconst path = require('path');\n\nconst results = {\n  timestamp: new Date().toISOString(),\n  steps: []\n};\n\ntry {\n  // Étape 2.1 : Vérifier que le répertoire existe\n  const botDir = '/root/frankito-bot';\n  const botFile = path.join(botDir, 'bot.js');\n  \n  results.steps.push('📁 Vérification du répertoire...');\n  \n  if (!fs.existsSync(botDir)) {\n    results.steps.push(`❌ Le répertoire ${botDir} n'existe pas`);\n    results.success = false;\n    return results;\n  }\n  \n  results.steps.push(`✅ Répertoire trouvé: ${botDir}`);\n  \n  // Étape 2.2 : Faire un backup de l'ancien fichier\n  results.steps.push('💾 Backup de l\\'ancien fichier...');\n  \n  if (fs.existsSync(botFile)) {\n    const backupFile = path.join(botDir, `bot.js.backup.${Date.now()}`);\n    fs.copyFileSync(botFile, backupFile);\n    results.steps.push(`✅ Backup créé: ${backupFile}`);\n    results.backup_file = backupFile;\n  } else {\n    results.steps.push('ℹ️ Pas de fichier existant à sauvegarder');\n  }\n  \n  // Étape 2.3 : Écrire le nouveau fichier\n  results.steps.push('✍️ Écriture du nouveau bot.js...');\n  \n  fs.writeFileSync(botFile, botCode, { encoding: 'utf-8', mode: 0o644 });\n  \n  results.steps.push(`✅ Fichier écrit: ${botFile}`);\n  results.file_written = botFile;\n  results.file_size = botCode.length;\n  \n  // Étape 2.4 : Vérifier que le fichier est bien écrit\n  const writtenContent = fs.readFileSync(botFile, 'utf-8');\n  if (writtenContent === botCode) {\n    results.steps.push('✅ Vérification du fichier: OK');\n  } else {\n    results.steps.push('⚠️ Le fichier écrit ne correspond pas exactement');\n  }\n  \n  // ============================================\n  // ÉTAPE 3 : Redémarrer PM2\n  // ============================================\n  \n  results.steps.push('🔄 Redémarrage de PM2...');\n  \n  try {\n    // Trouver PM2 (essayer plusieurs chemins)\n    let pm2Command = 'pm2';\n    \n    try {\n      const whichPm2 = execSync('which pm2', { encoding: 'utf-8', timeout: 3000 }).trim();\n      pm2Command = whichPm2;\n      results.steps.push(`✅ PM2 trouvé: ${pm2Command}`);\n    } catch (e) {\n      results.steps.push('⚠️ which pm2 échoué, utilisation de \"pm2\" par défaut');\n    }\n    \n    // Redémarrer PM2\n    const restartOutput = execSync(`cd ${botDir} && ${pm2Command} restart all`, {\n      encoding: 'utf-8',\n      timeout: 15000\n    });\n    \n    results.steps.push('✅ PM2 restart all exécuté');\n    results.pm2_restart_output = restartOutput.trim();\n    \n    // Obtenir le statut PM2\n    const statusOutput = execSync(`${pm2Command} jlist`, {\n      encoding: 'utf-8',\n      timeout: 5000\n    });\n    \n    const processes = JSON.parse(statusOutput);\n    const botProcess = processes.find(p => p.name === 'bot' || p.pm_id === 0);\n    \n    if (botProcess) {\n      results.steps.push(`✅ Bot trouvé: ${botProcess.name} (PID: ${botProcess.pid}, status: ${botProcess.pm2_env.status})`);\n      results.bot_status = botProcess.pm2_env.status;\n      results.bot_pid = botProcess.pid;\n      results.bot_uptime = Math.round((Date.now() - botProcess.pm2_env.pm_uptime) / 1000);\n      results.bot_restarts = botProcess.pm2_env.restart_time;\n    } else {\n      results.steps.push('⚠️ Aucun processus \"bot\" trouvé dans PM2');\n    }\n    \n    results.steps.push('🎉 Déploiement terminé avec succès!');\n    results.success = true;\n    \n  } catch (pm2Error) {\n    results.steps.push(`❌ Erreur PM2: ${pm2Error.message}`);\n    results.pm2_error = pm2Error.message;\n    results.success = false;\n    \n    // Le fichier est écrit mais PM2 a échoué\n    results.file_deployed = true;\n    results.pm2_deployed = false;\n  }\n  \n} catch (error) {\n  results.steps.push(`❌ Erreur fatale: ${error.message}`);\n  results.error = error.message;\n  results.stack = error.stack;\n  results.success = false;\n}\n\nreturn results;"
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Déployer Bot (FS + PM2)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-b8c9-0123-def1-234567890123",
+      "name": "Vérifier Succès",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e5f6a7b8-c9d0-1234-ef12-345678901234",
+              "name": "✅ Statut",
+              "value": "DÉPLOIEMENT RÉUSSI",
+              "type": "string"
+            },
+            {
+              "id": "f6a7b8c9-d0e1-2345-f123-456789012345",
+              "name": "📁 Fichier",
+              "value": "={{ $json.file_written }}",
+              "type": "string"
+            },
+            {
+              "id": "a7b8c9d0-e1f2-3456-1234-567890123456",
+              "name": "📊 Taille",
+              "value": "={{ $json.file_size }} bytes ({{ Math.round($json.file_size / 1024 * 10) / 10 }} KB)",
+              "type": "string"
+            },
+            {
+              "id": "b8c9d0e1-f2a3-4567-2345-678901234567",
+              "name": "🤖 Bot Status",
+              "value": "={{ $json.bot_status || 'unknown' }}",
+              "type": "string"
+            },
+            {
+              "id": "c9d0e1f2-a3b4-5678-3456-789012345678",
+              "name": "🆔 Bot PID",
+              "value": "={{ $json.bot_pid || 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "d0e1f2a3-b4c5-6789-4567-890123456789",
+              "name": "⏱️ Uptime",
+              "value": "={{ $json.bot_uptime || 0 }} secondes",
+              "type": "string"
+            },
+            {
+              "id": "e1f2a3b4-c5d6-7890-5678-901234567890",
+              "name": "🔄 Restarts",
+              "value": "={{ $json.bot_restarts || 0 }}",
+              "type": "string"
+            },
+            {
+              "id": "f2a3b4c5-d6e7-8901-6789-012345678901",
+              "name": "💾 Backup",
+              "value": "={{ $json.backup_file || 'Aucun' }}",
+              "type": "string"
+            },
+            {
+              "id": "a3b4c5d6-e7f8-9012-7890-123456789012",
+              "name": "📝 Étapes",
+              "value": "={{ $json.steps.join('\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "b4c5d6e7-f8a9-0123-8901-234567890123",
+              "name": "🕐 Timestamp",
+              "value": "={{ $json.timestamp }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5f6a7b8-c9d0-1234-ef12-345678901235",
+      "name": "✅ Succès",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [840, 180]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f6a7b8c9-d0e1-2345-f123-456789012346",
+              "name": "❌ Statut",
+              "value": "DÉPLOIEMENT ÉCHOUÉ",
+              "type": "string"
+            },
+            {
+              "id": "a7b8c9d0-e1f2-3456-1234-567890123457",
+              "name": "⚠️ Erreur",
+              "value": "={{ $json.error || 'Erreur inconnue' }}",
+              "type": "string"
+            },
+            {
+              "id": "b8c9d0e1-f2a3-4567-2345-678901234568",
+              "name": "📝 Étapes",
+              "value": "={{ $json.steps.join('\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "c9d0e1f2-a3b4-5678-3456-789012345679",
+              "name": "💡 Suggestion",
+              "value": "Vérifiez les permissions: sudo chown -R $(whoami) /root/frankito-bot/",
+              "type": "string"
+            },
+            {
+              "id": "d0e1f2a3-b4c5-6789-4567-890123456780",
+              "name": "🔍 Debug",
+              "value": "={{ JSON.stringify($json, null, 2) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f6a7b8c9-d0e1-2345-f123-456789012347",
+      "name": "❌ Échec",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [840, 420]
+    }
+  ],
+  "connections": {
+    "Démarrer": {
+      "main": [
+        [
+          {
+            "node": "Déployer Bot (FS + PM2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déployer Bot (FS + PM2)": {
+      "main": [
+        [
+          {
+            "node": "Vérifier Succès",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vérifier Succès": {
+      "main": [
+        [
+          {
+            "node": "✅ Succès",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Échec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-06T00:00:00.000Z",
+  "versionId": "1"
+}

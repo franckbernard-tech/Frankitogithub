@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Health Check - Validation de la configuration Frankito-IA
  *

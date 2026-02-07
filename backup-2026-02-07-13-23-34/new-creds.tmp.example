@@ -1,0 +1,10 @@
+# Exemple de fichier de credentials temporaire
+# Copiez ce fichier en new-creds.tmp et remplissez vos valeurs
+#
+# Usage:
+#   1. Copiez vos nouveaux tokens ici
+#   2. Lancez: node auto-rotate.js --from-file=new-creds.tmp
+#   3. Le fichier sera automatiquement supprimé après rotation
+
+TELEGRAM_BOT_TOKEN=your_new_telegram_token_here
+N8N_API_KEY=your_new_n8n_api_key_here

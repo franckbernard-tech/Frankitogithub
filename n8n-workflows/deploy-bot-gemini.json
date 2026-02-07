@@ -1,0 +1,128 @@
+{
+  "name": "🚀 Deploy Bot Gemini (Write to Disk)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "cat > /root/frankito-bot/bot.js << 'EOFCODE'\nconst { Telegraf } = require('telegraf');\nconst axios = require('axios');\nconst BOT_TOKEN = '8510817329:AAE72JsuTE_r-sAnclrNN5APE1wIDeKKGXE';\nconst N8N_API = 'https://n8n.srv1289936.hstgr.cloud/api/v1/workflows';\nconst N8N_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4YWVhYjY1Ny04ZDU0LTRmYTQtYWYzYi0zYzQzODM3ZWY0MWMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiOTIxMmNjOWUtYTBiMC00ZjkxLWI1MjgtYjk3MDI3NjJkNTY3IiwiaWF0IjoxNzcwMzg0NDA3fQ.bU1XT4VoSyMVQOSV4byi5tMTjMZDacb9T_g44VPQ_jI';\n\nconst bot = new Telegraf(BOT_TOKEN);\n\nbot.command('n8n', async (ctx) => {\n  const msg = ctx.message.text.replace('/n8n', '').trim();\n  if (!msg) return ctx.reply('Usage: /n8n <message>');\n  \n  try {\n    const workflow = {\n      name: `Auto-${Date.now()}`,\n      nodes: [\n        {\n          parameters: {},\n          name: 'Start',\n          type: 'n8n-nodes-base.manualTrigger',\n          typeVersion: 1,\n          position: [250, 300]\n        },\n        {\n          parameters: {\n            values: {\n              string: [{ name: 'request', value: msg }]\n            }\n          },\n          name: 'Data',\n          type: 'n8n-nodes-base.set',\n          typeVersion: 3.4,\n          position: [450, 300]\n        }\n      ],\n      connections: { 'Start': { main: [[{ node: 'Data', type: 'main', index: 0 }]] } }\n    };\n    \n    const res = await axios.post(N8N_API, workflow, {\n      headers: { 'X-N8N-API-KEY': N8N_KEY, 'Content-Type': 'application/json' }\n    });\n    \n    ctx.reply(`✅ Workflow créé!\\nID: ${res.data.id}\\nURL: https://n8n.srv1289936.hstgr.cloud/workflow/${res.data.id}`);\n  } catch (err) {\n    ctx.reply(`❌ Erreur: ${err.message}`);\n  }\n});\n\nbot.start(ctx => ctx.reply('Bot prêt! Utilisez /n8n <message>'));\nbot.launch();\nconsole.log('✅ Bot démarré');\nprocess.once('SIGINT', () => bot.stop('SIGINT'));\nprocess.once('SIGTERM', () => bot.stop('SIGTERM'));\nEOFCODE"
+      },
+      "id": "execute-command-1",
+      "name": "Write bot.js to disk",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /root/frankito-bot && pm2 restart all"
+      },
+      "id": "execute-command-2",
+      "name": "Restart PM2",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "command": "pm2 status"
+      },
+      "id": "execute-command-3",
+      "name": "Check PM2 Status",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "✅ Déploiement réussi"
+            },
+            {
+              "name": "file",
+              "value": "/root/frankito-bot/bot.js"
+            },
+            {
+              "name": "pm2_output",
+              "value": "={{ $json.stdout }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-node-1",
+      "name": "Format Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Write bot.js to disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write bot.js to disk": {
+      "main": [
+        [
+          {
+            "node": "Restart PM2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restart PM2": {
+      "main": [
+        [
+          {
+            "node": "Check PM2 Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check PM2 Status": {
+      "main": [
+        [
+          {
+            "node": "Format Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-06T00:00:00.000Z",
+  "versionId": "1"
+}

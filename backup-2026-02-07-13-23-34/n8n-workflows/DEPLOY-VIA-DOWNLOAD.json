@@ -1,0 +1,27 @@
+{
+  "name": "🚀 Déployer Bot (Download Script)",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "START",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "curl -o /tmp/deploy-bot.sh https://gist.githubusercontent.com/[VOTRE-GIST]/auto-deploy-bot.sh && chmod +x /tmp/deploy-bot.sh && bash /tmp/deploy-bot.sh"
+      },
+      "name": "Télécharger et exécuter",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [450, 300]
+    }
+  ],
+  "connections": {
+    "START": {
+      "main": [[{ "node": "Télécharger et exécuter", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}
